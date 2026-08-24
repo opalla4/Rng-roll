@@ -1,12 +1,15 @@
 {
-  "background_color": "#ffffff",
-  "dir": "ltr",
-  "display": "standalone",
-  "name": "RollRng",
-  "orientation": "any",
-  "scope": "/",
-  "short_name": "RollRng",
+  "name": "Roll Rng",
+  "short_name": "Rng",
   "start_url": "/",
-  "theme_color": "#ffffff",
-  "lang": "ar"
+  "display": "fullscreen",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

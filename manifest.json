@@ -1,15 +1,18 @@
 {
-  "name": "Roll Rng",
-  "short_name": "Rng",
-  "start_url": "/",
-  "display": "fullscreen",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "name": "Hardcore Weapons & Pets RNG RPG",
+  "short_name": "RNG RPG",
+  "description": "A hardcore weapon and pet RNG RPG game built for mobile.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0e12",
+  "theme_color": "#6c5ce7",
   "icons": [
     {
       "src": "icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

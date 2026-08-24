@@ -1,8 +1,8 @@
 const CACHE_NAME = 'rng-game-v1';
 
 const assetsToCache = [
-  '/',
-  '/index.html'
+  './index.html',
+  './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {

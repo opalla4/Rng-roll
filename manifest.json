@@ -1,0 +1,12 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "RollRng",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "RollRng",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "lang": "ar"
+}

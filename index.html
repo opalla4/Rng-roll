@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Game - Unified Packs Edition v1.1.8 (Secured)</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root { --bg: #0d0e12; --card: #16181e; --accent: #6c5ce7; --gold: #f1c40f; --gem: #00cec9; --aura: #e056fd; --tree: #badc58; --pet: #e84393; }
+        body { background: var(--bg); color: #fff; font-family: system-ui, sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; user-select: none; overflow-x: hidden; }
+        
+        .version-tag { font-size: 11px; color: #8a8d9b; margin-bottom: 5px; font-weight: bold; cursor: pointer; text-decoration: underline; transition: color 0.2s; }
+        .version-tag:hover { color: var(--gem); }
+        
+        .btn-leaderboard-top { width: 100%; max-width: 900px; background: linear-gradient(135deg, #f39c12, #d35400); color: #fff; border: 2px solid #f1c40f; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 8px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.4); transition: transform 0.2s; }
+        .btn-leaderboard-top:active { transform: scale(0.98); }
+
+        .stats-bar { display: flex; gap: 6px; background: var(--card); padding: 8px 10px; border-radius: 8px; border: 1px solid #2a2d37; font-size: 10px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; justify-content: center; width: 100%; max-width: 900px; box-sizing: border-box; }
+        .currency-badge { display: flex; align-items: center; gap: 3px; background: rgba(255,255,255,0.05); padding: 3px 5px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
+        .coin-icon { width: 10px; height: 10px; background: radial-gradient(circle, #ffeaa7, #fdcb6e); border-radius: 50%; border: 1px solid #d63031; display: inline-block; box-shadow: 0 0 5px rgba(253, 203, 110, 0.5); }
+        .gem-icon { width: 9px; height: 9px; background: radial-gradient(circle, #81ecec, #00cec9); transform: rotate(45deg); display: inline-block; box-shadow: 0 0 5px rgba(0, 206, 201, 0.6); }
+        .tree-icon { width: 9px; height: 9px; background: radial-gradient(circle, #6ab04c, #badc58); border-radius: 50%; display: inline-block; box-shadow: 0 0 5px rgba(186, 220, 88, 0.6); }
+
+        .auth-bar { display: flex; gap: 8px; align-items: center; background: var(--card); border: 1px solid #2a2d37; padding: 6px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 11px; width: 100%; max-width: 900px; box-sizing: border-box; justify-content: space-between; }
+
+        .main { display: flex; gap: 10px; max-width: 900px; width: 100%; flex-wrap: wrap; }
+        .panel { background: var(--card); border: 1px solid #2a2d37; border-radius: 12px; padding: 12px; flex: 1; min-width: 290px; text-align: center; box-sizing: border-box; }
+        .item-display { font-size: 16px; font-weight: bold; margin: 5px 0; min-height: 28px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .controls { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+        button { background: var(--accent); color: #fff; border: none; padding: 8px 12px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        button:active { transform: scale(0.95); }
+        .btn-gold { background: var(--gold); color: #000; }
+        .btn-gem { background: var(--gem); color: #000; }
+        .btn-aura { background: var(--aura); color: #000; }
+        .btn-pet { background: var(--pet); color: #fff; }
+        .btn-fish { background: #576574; color: #b2bec3; cursor: not-allowed; }
+        .btn-tree { background: #576574; color: #b2bec3; cursor: not-allowed; }
+        .btn-danger { background: #e74c3c; }
+        .btn-attack { background: #ff4757; color: #fff; font-size: 14px; padding: 8px 16px; border: 2px solid #ff6b81; }
+        .btn-nav { background: #34495e; padding: 4px 10px; font-size: 12px; }
+        
+        .btn-auto-pack { background: linear-gradient(135deg, #ff9f43, #ee5253); color: #fff; border: 1px solid #ff6b6b; font-weight: bold; }
+        .btn-auto-pet-pack { background: linear-gradient(135deg, #e84393, #6c5ce7); color: #fff; border: 1px solid #fd79a8; font-weight: bold; }
+        .btn-auto-fight { background: linear-gradient(135deg, #10ac84, #1dd1a1); color: #000; border: 1px solid #10ac84; font-weight: bold; }
+        .btn-auto-wave { background: linear-gradient(135deg, #3742fa, #2f3542); color: #fff; border: 1px solid #5352ed; font-weight: bold; }
+        .btn-guide { background: linear-gradient(135deg, #00b894, #00cec9); color: #000; font-weight: bold; }
+        .btn-auto-off { background: #576574 !important; color: #c8d6e5 !important; border: 1px solid #8395a7 !important; }
+
+        #canvas { background: radial-gradient(circle, #1a1c23 0%, #050508 100%); border: 1px solid #333; border-radius: 8px; width: 100%; height: 220px; box-sizing: border-box; }
+        .inv { max-height: 110px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; font-size: 11px; margin-top: 5px; }
+        .inv-item { display: flex; justify-content: space-between; align-items: center; background: #0d0e12; padding: 3px 6px; border-radius: 4px; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-box { background: var(--card); border: 2px solid var(--gem); border-radius: 12px; padding: 15px; width: 360px; text-align: center; max-height: 85vh; display: flex; flex-direction: column; box-sizing: border-box; }
+        .upgrades-box, .tiers-box, .leaderboard-box, .patch-notes-box { background: #0d0e12; border: 1px solid #2a2d37; border-radius: 8px; padding: 10px; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow-y: auto; text-align: left; font-size: 11px; }
+        .upgrade-row, .tier-row, .lb-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+
+        .index-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; text-align: left; padding-right: 5px; max-height: 50vh; }
+        .index-item { background: #0d0e12; padding: 6px 8px; border-radius: 6px; border: 1px solid #2a2d37; font-size: 11px; display: flex; justify-content: space-between; align-items: center; }
+        .index-item.locked { opacity: 0.3; filter: grayscale(1); }
+
+        .luck-tag { background: rgba(46, 204, 113, 0.15); border: 1px solid #2ecc71; color: #2ecc71; padding: 2px 5px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        
+        .coming-soon-banner { background: linear-gradient(135deg, #e74c3c, #8e44ad); color: #fff; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 13px; text-align: center; margin: 15px 0; }
+
+        .rarity-supreme { background: linear-gradient(90deg, #ff007f, #7f00ff, #00f0ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; animation: rainbowGlow 1.5s infinite linear; }
+        .rarity-transcendent { background: linear-gradient(90deg, #ffd700, #ff4500, #ff1493, #00ffff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; animation: rainbowGlow 1s infinite linear; filter: drop-shadow(0 0 4px rgba(255,215,0,0.6)); }
+        @keyframes rainbowGlow { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+
+        .auth-input { background: #0d0e12; border: 1px solid #2a2d37; color: #fff; padding: 8px; border-radius: 6px; margin-bottom: 8px; width: calc(100% - 18px); font-size: 12px; box-sizing: border-box; }
+        
+        .info-dropdown-btn { background: #34495e; color: #fff; border: 1px solid #4b6584; width: 100%; padding: 6px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; margin-bottom: 6px; text-align: left; display: flex; justify-content: space-between; align-items: center; }
+        .info-dropdown-content { display: none; background: #0d0e12; border: 1px solid #2a2d37; padding: 8px; border-radius: 6px; font-size: 10px; color: #a4b0be; margin-bottom: 8px; text-align: left; }
+    </style>
+</head>
+<body id="body">
+
+    <div class="version-tag" onclick="openPatchNotesModal()">v1.1.8 - Guide & Balanced Economy Edition (Click for Patch Notes)</div>
+
+    <button class="btn-leaderboard-top" onclick="openLeaderboardModal()">🏆 GLOBAL LEADERBOARD (Top Players)</button>
+
+    <div class="auth-bar">
+        <span>Account: <b id="userStatus" style="color:var(--gem)">Guest (Local)</b></span>
+        <button id="authBtn" class="btn-gem" style="padding:4px 8px; font-size:10px;" onclick="openAuthModal()">Login / Register</button>
+    </div>
+
+    <div class="stats-bar">
+        <div>Rolls: <span id="rolls">0</span></div>
+        <div class="currency-badge"><span class="coin-icon"></span> <span id="coins" style="color:var(--gold)">500</span></div>
+        <div class="currency-badge"><span class="gem-icon"></span> <span id="gems" style="color:var(--gem)">10</span></div>
+        <div class="currency-badge"><span class="tree-icon"></span> <span id="tokens" style="color:var(--tree)">0</span></div>
+        <div>Power ⚔️: <span id="pwr">10</span></div>
+        <div>HP ❤️: <span id="hpDisplay">100</span>/<span id="maxHpDisplay">100</span></div>
+        <div class="luck-tag">🍀 x<span id="statLuckMulti">1.00</span></div>
+    </div>
+
+    <div class="main">
+        <div class="panel">
+            <div id="itemName" class="item-display" style="color: #a6a6a6;">Open a Roll!</div>
+            <div id="itemChance" style="font-size: 11px; color: #8a8d9b;">Choose a roll type below</div>
+            
+            <div style="margin-bottom: 6px;">
+                <button class="btn-guide" style="width: 100%; padding: 8px; font-size: 12px;" onclick="openGuideModal()">📖 شرح اللعبة (Game Guide)</button>
+            </div>
+
+            <div class="controls" style="margin-top: 6px; background: rgba(241, 196, 15, 0.08); border: 1px solid rgba(241, 196, 15, 0.3); padding: 6px; border-radius: 8px;">
+                <div style="font-size: 11px; color: var(--gold); font-weight: bold; width: 100%; text-align: center;">⚔️ Weapon Roll Menu</div>
+                <button class="btn-gold" style="flex: 1; padding: 6px;" onclick="openWeaponTiersModal()">⚔️ Open Weapon Tiers</button>
+            </div>
+
+            <div class="controls" style="margin-top: 6px; background: rgba(232, 67, 147, 0.1); border: 1px solid rgba(232, 67, 147, 0.3); padding: 6px; border-radius: 8px;">
+                <div style="font-size: 11px; color: var(--pet); font-weight: bold; width: 100%; text-align: center;">🐾 Pet Roll Menu</div>
+                <button class="btn-pet" style="flex: 1; padding: 6px;" onclick="openPetTiersModal()">🐾 Open Pet Tiers</button>
+            </div>
+
+            <div style="display: flex; gap: 5px; margin-top: 6px;">
+                <button id="autoWeaponBtn" class="btn-auto-pack btn-auto-off" style="flex: 1; font-size: 10px; padding: 6px;" onclick="toggleAutoPack('weapon')">AUTO WEAPON: OFF</button>
+                <button id="autoPetBtn" class="btn-auto-pet-pack btn-auto-off" style="flex: 1; font-size: 10px; padding: 6px;" onclick="toggleAutoPack('pet')">AUTO PET: OFF</button>
+            </div>
+            
+            <div style="display: flex; gap: 5px; margin-top: 6px;">
+                <button class="btn-aura" style="flex: 1; padding: 8px; font-size: 11px;" onclick="openAuraModal()">✨ Aura Roll</button>
+            </div>
+
+            <div style="display: flex; gap: 5px; margin-top: 8px;">
+                <button class="btn-gem" style="flex: 1; padding: 8px; font-size: 11px;" onclick="toggleUpgradesModal(true)">⚡ Upgrades</button>
+                <button class="btn-tree" style="flex: 1; padding: 8px; font-size: 11px;" onclick="toggleTreeModal(true)">🌳 Skill Tree</button>
+                <button class="btn-gold" style="flex: 1; padding: 8px; font-size: 11px;" onclick="toggleIndexModal(true)">📖 Index</button>
+            </div>
+
+            <div style="margin-top: 6px;">
+                <button class="btn-fish" style="width: 100%; padding: 8px; font-size: 12px;" onclick="toggleFishingModal(true)">🔒 Classified Zone X-9</button>
+            </div>
+
+            <div style="text-align: left; margin-top: 6px;">
+                <b style="font-size: 11px;">Inventory:</b>
+                <div class="inv" id="invList"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:bold; margin-bottom:4px;">
+                <span>Battlefield ⚔️</span>
+                <div>
+                    <button class="btn-nav" onclick="changeWave(-1)">&lt;</button>
+                    <span style="color:#e74c3c; margin: 0 4px;">Wave: <span id="wave">1</span></span>
+                    <button class="btn-nav" onclick="changeWave(1)">&gt;</button>
+                </div>
+            </div>
+            
+            <canvas id="canvas" width="340" height="220"></canvas>
+            
+            <div style="display: flex; gap: 6px; justify-content: center; margin-top: 6px; flex-wrap: wrap;">
+                <button class="btn-attack" onclick="manualAttack()">⚔️ ATTACK!</button>
+                <button id="autoFightBtn" class="btn-auto-fight" onclick="toggleAutoFight()">Auto Attack: ON</button>
+                <button id="autoWaveBtn" class="btn-auto-wave btn-auto-off" onclick="toggleAutoWave()">Auto Wave: OFF</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="guideModal">
+        <div class="modal-box" style="border-color: #00cec9;">
+            <h3 style="margin: 0 0 10px 0; color: #00cec9;">📖 شرح اللعبة (Game Guide)</h3>
+            <div class="patch-notes-box" style="text-align: right; direction: rtl;">
+                <p style="margin: 6px 0;">🎮 **فكرة اللعبة:** قم بفتح الصناديق (البكجات) للحصول على أسلحة وحيوانات أليفة جديدة.</p>
+                <p style="margin: 6px 0;">⚔️ **زيادة القوة:** كل سلاح أو حيوان أليف تحصل عليه يرفع من قوتك الهجومية (Power).</p>
+                <p style="margin: 6px 0;">❤️ **زيادة الصحة (HP):** أي سلاح أو حيوان أليف تملكه يقوم تلقائياً بزيادة صحة اللاعب (HP Bar) بنسبة **0.1%** إضافية!</p>
+                <p style="margin: 6px 0;">✨ **الأشياء النادرة:** كلما تقدمت وفتحت بكجات أعلى، زادت فرصة حصولك على أشياء نادرة (Legendary, Mythic, Supreme, Transcendent).</p>
+                <p style="margin: 6px 0;">⚡ **التطويرات:** استخدم الجواهر لتطوير الحظ، سرعة الهجوم، والصحة القصوى من قائمة (Upgrades).</p>
+            </div>
+            <button class="btn-danger" style="margin-top: 12px; width: 100%; padding: 6px;" onclick="closeGuideModal()">إغلاق</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="patchNotesModal">
+        <div class="modal-box" style="border-color: var(--accent);">
+            <h3 style="margin: 0 0 10px 0; color: var(--accent);">📜 Patch Notes & Update Info</h3>
+            
+            <button class="info-dropdown-btn" onclick="toggleInfoDropdown()">📌 Quick Game Guide & Version Changes ▼</button>
+            <div class="info-dropdown-content" id="infoDropdownContent">
+                • <b>Guide Added:</b> New game guide modal explaining weapons, pets, and stats.<br>
+                • <b>HP Bonus per Item:</b> Every weapon and pet owned increases Max HP by 0.1%.<br>
+                • <b>Price Update:</b> First weapon pack is now 50 coins, first pet pack is 100 coins.<br>
+                • <b>Auto-Wave & Anti-Cheat:</b> Secure synchronization via Supabase.
+            </div>
+
+            <div class="patch-notes-box">
+                <b style="color: var(--gold);">Version 1.1.8 Highlights:</b>
+                <p style="margin: 4px 0;">📖 **Guide Added:** Added Game Guide menu.</p>
+                <p style="margin: 4px 0;">❤️ **HP Passive:** +0.1% Max HP per item owned.</p>
+                <p style="margin: 4px 0;">💰 **Pack Prices:** Tier 1 Weapon pack set to 50, Tier 1 Pet pack set to 100.</p>
+            </div>
+            <button class="btn-danger" style="margin-top: 12px; width: 100%; padding: 6px;" onclick="closePatchNotesModal()">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="authModal">
+        <div class="modal-box">
+            <h3 style="margin: 0 0 10px 0; color: var(--gem);">☁️ Cloud Save Account (Required)</h3>
+            <div style="font-size:10px; color:#8a8d9b; margin-bottom:8px;">Please Login or Register to play the game securely.</div>
+            <input type="text" id="authUsername" class="auth-input" placeholder="Username / Email">
+            <input type="password" id="authPassword" class="auth-input" placeholder="Password">
+            <div id="authMsg" style="font-size:10px; color:#e74c3c; margin-bottom:8px;"></div>
+            <div style="display:flex; gap:6px;">
+                <button class="btn-gem" style="flex:1" onclick="loginUser()">Login</button>
+                <button class="btn-gold" style="flex:1" onclick="registerUser()">Register</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="leaderboardModal">
+        <div class="modal-box" style="border-color: var(--gold);">
+            <h3 style="margin: 0 0 10px 0; color: var(--gold);">🏆 Global Leaderboard</h3>
+            <div style="font-size: 10px; color: #8a8d9b; margin-bottom: 5px;">Top players ranked securely by highest wave reached</div>
+            <div class="leaderboard-box" id="leaderboardContainer">Loading rankings...</div>
+            <button class="btn-danger" style="margin-top: 12px; width: 100%; padding: 6px;" onclick="closeLeaderboardModal()">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="weaponTiersModal">
+        <div class="modal-box">
+            <h3 style="margin: 0 0 10px 0; color: var(--gold);">⚔️ Select Weapon Pack Tier</h3>
+            <div class="tiers-box" id="weaponTiersContainer"></div>
+            <button class="btn-danger" style="margin-top: 12px; width: 100%; padding: 6px;" onclick="closeWeaponTiersModal()">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="petTiersModal">
+        <div class="modal-box" style="border-color: var(--pet);">
+            <h3 style="margin: 0 0 10px 0; color: var(--pet);">🐾 Select Pet Pack Tier</h3>
+            <div class="tiers-box" id="petTiersContainer"></div>
+            <button class="btn-danger" style="margin-top: 12px; width: 100%; padding: 6px;" onclick="closePetTiersModal()">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="auraModal">
+        <div class="modal-box">
+            <h3 style="margin: 0 0 5px 0; color: var(--aura);">✨ Aura Roll Pack</h3>
+            <div class="coming-soon-banner">🚧 Aura Packs Coming Soon!</div>
+            <button class="btn-danger" style="margin-top: 12px; width: 100%; padding: 6px;" onclick="closeAuraModal()">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="fishingModal">
+        <div class="modal-box">
+            <h3 style="margin: 0 0 5px 0; color: #b2bec3;">🔒 Classified Zone X-9</h3>
+            <div class="coming-soon-banner">🚧 Coming Soon!</div>
+            <button class="btn-danger" style="margin-top: 12px; width: 100%; padding: 6px;" onclick="toggleFishingModal(false)">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="upgradesModal">
+        <div class="modal-box">
+            <h3 style="margin: 0 0 10px 0; color: var(--gem);">⚡ Upgrades</h3>
+            <div class="upgrades-box">
+                <div class="upgrade-row">
+                    <span>❤️ Max HP Bonus: +<span id="hpBonusPct">0</span></span>
+                    <button class="btn-gem" onclick="buyUpgrade('hp')">Upgrade (💎<span id="hpCost">2</span>)</button>
+                </div>
+                <div class="upgrade-row">
+                    <span>🍀 Luck Boost: +<span id="luckPct">0</span>%</span>
+                    <button class="btn-gem" onclick="buyUpgrade('luck')">Upgrade (💎<span id="luckCost">2</span>)</button>
+                </div>
+                <div class="upgrade-row">
+                    <span>⚡ Attack Speed: +<span id="atkSpeedBonus">0</span>%</span>
+                    <button class="btn-gem" onclick="buyUpgrade('speed')">Upgrade (💎<span id="speedCost">3</span>)</button>
+                </div>
+                <div class="upgrade-row">
+                    <span>🎁 Fast Roll Speed: +<span id="fastRollBonus">0</span>%</span>
+                    <button class="btn-gem" onclick="buyUpgrade('fastRoll')">Upgrade (💎<span id="fastRollCost">3</span>)</button>
+                </div>
+                <div class="upgrade-row">
+                    <span>💥 Crit Multiplier: x<span id="critBonus">1.50</span> (Locked)</span>
+                    <button class="btn-fish" style="cursor: not-allowed;">Locked</button>
+                </div>
+            </div>
+            <button class="btn-danger" style="margin-top: 12px; width: 100%; padding: 6px;" onclick="toggleUpgradesModal(false)">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="treeModal">
+        <div class="modal-box">
+            <h3 style="margin: 0 0 5px 0; color: var(--tree);">🌳 Skill Tree</h3>
+            <div class="coming-soon-banner">🚧 Coming Soon!</div>
+            <button class="btn-danger" style="margin-top: 12px; width: 100%; padding: 6px;" onclick="toggleTreeModal(false)">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="indexModal">
+        <div class="modal-box">
+            <h3 style="margin: 0 0 5px 0; color: var(--gold);">📖 Item Index</h3>
+            <div style="font-size: 11px; margin-bottom: 5px; display:flex; gap:4px; justify-content:center;">
+                <button class="btn-nav" onclick="renderIndex('weapons')">Weapons ⚔️</button>
+                <button class="btn-nav" onclick="renderIndex('pets')">Pets 🐾</button>
+            </div>
+            <div class="index-list" id="indexList"></div>
+            <button class="btn-danger" style="margin-top: 12px; width: 100%; padding: 6px;" onclick="toggleIndexModal(false)">Close</button>
+        </div>
+    </div>
+
+<script>
+    (function(){
+        const _0x1a2b=['https://vvfrdoykirlscgjxukos.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2ZnJkb3lraXJsc2Nnanh1a29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MDg2MjAsImV4cCI6MjEwMzE4NDYyMH0.Rq5qiK0ByvmybeQFfdJ_Hx_JJ5aL8N_HWxJwg_HiAak','dev_rpg_save_v1_1_8','profiles'];
+        const SUPABASE_URL = _0x1a2b[0];
+        const SUPABASE_ANON_KEY = _0x1a2b[1];
+        
+        let supabaseClient = null;
+        try {
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {}
+        
+        let currentUser = null;
+
+        function sanitizeNumber(val, min = 0, max = 1000000000000) {
+            let num = Number(val);
+            if (isNaN(num) || !isFinite(num)) return min;
+            return Math.min(Math.max(num, min), max);
+        }
+
+        function antiCheatCheck() {
+            rolls = sanitizeNumber(rolls, 0, 1000000000);
+            coins = sanitizeNumber(coins, 0, 1000000000000000);
+            gems = sanitizeNumber(gems, 0, 1000000000);
+            tokens = sanitizeNumber(tokens, 0, 1000000000);
+            currentWave = sanitizeNumber(currentWave, 1, 10000);
+            maxUnlockedWave = sanitizeNumber(maxUnlockedWave, 1, 10000);
+            if (currentWave > maxUnlockedWave) currentWave = maxUnlockedWave;
+        }
+
+        const ALL_WEAPONS = [
+            { id: 0, name: "Wooden Sword", baseChance: 0.4, color: "#a6a6a6", power: 3, rarity: "Common", icon: "🗡️" },
+            { id: 1, name: "Rusty Club", baseChance: 0.3, color: "#a6a6a6", power: 6, rarity: "Common", icon: "🏏" },
+            { id: 2, name: "Iron Dagger", baseChance: 0.15, color: "#3498db", power: 15, rarity: "Rare", icon: "🗡️" },
+            { id: 3, name: "Steel Spear", baseChance: 0.08, color: "#3498db", power: 30, rarity: "Rare", icon: "🔱" },
+            { id: 4, name: "Void Dagger", baseChance: 0.04, color: "#00d2d3", power: 65, rarity: "Epic", icon: "⚔️" },
+            { id: 5, name: "Crystal Hammer", baseChance: 0.02, color: "#00d2d3", power: 120, rarity: "Epic", icon: "🔨" },
+            { id: 6, name: "Flame Katana", baseChance: 0.008, color: "#9b59b6", power: 250, rarity: "Legendary", icon: "🔥" },
+            { id: 7, name: "Thunder Spear", baseChance: 0.004, color: "#9b59b6", power: 500, rarity: "Legendary", icon: "⚡" },
+            { id: 8, name: "Solar Halberd", baseChance: 0.0025, color: "#9b59b6", power: 850, rarity: "Legendary", icon: "☀️" },
+            { id: 9, name: "Frostbite Greatsword", baseChance: 0.0015, color: "#9b59b6", power: 1400, rarity: "Legendary", icon: "❄️" },
+            { id: 10, name: "Magma Crusher", baseChance: 0.0009, color: "#9b59b6", power: 2200, rarity: "Legendary", icon: "🌋" },
+            { id: 11, name: "Gale Saber", baseChance: 0.0005, color: "#9b59b6", power: 3500, rarity: "Legendary", icon: "🌪️" },
+            { id: 12, name: "Shadow Scythe", baseChance: 0.0003, color: "#f1c40f", power: 5500, rarity: "Mythic", icon: "🪓" },
+            { id: 13, name: "Solar Blade", baseChance: 0.00018, color: "#f1c40f", power: 8500, rarity: "Mythic", icon: "☀️" },
+            { id: 14, name: "Ethereal Wand", baseChance: 0.0001, color: "#f1c40f", power: 13000, rarity: "Mythic", icon: "🪄" },
+            { id: 15, name: "Astral Warhammer", baseChance: 0.00006, color: "#f1c40f", power: 20000, rarity: "Mythic", icon: "☄️" },
+            { id: 16, name: "Supernova Spear", baseChance: 0.000035, color: "#f1c40f", power: 30000, rarity: "Mythic", icon: "🌟" },
+            { id: 17, name: "Eclipse Edge", baseChance: 0.00002, color: "#f1c40f", power: 45000, rarity: "Mythic", icon: "🌑" },
+            { id: 18, name: "Dragon Slayer", baseChance: 0.000012, color: "#ff6b6b", power: 70000, rarity: "Divine", icon: "🐉" },
+            { id: 19, name: "Valkyrie Bow", baseChance: 0.000007, color: "#ff6b6b", power: 110000, rarity: "Divine", icon: "🏹" },
+            { id: 20, name: "Seraphim Scythe", baseChance: 0.000004, color: "#ff6b6b", power: 170000, rarity: "Divine", icon: "🪽" },
+            { id: 21, name: "Titanium God-Bow", baseChance: 0.0000022, color: "#ff6b6b", power: 250000, rarity: "Divine", icon: "🎯" },
+            { id: 22, name: "Ragnarok Hammer", baseChance: 0.0000012, color: "#ff6b6b", power: 380000, rarity: "Divine", icon: "🔨" },
+            { id: 23, name: "Yggdrasil Branch", baseChance: 0.0000007, color: "#ff6b6b", power: 550000, rarity: "Divine", icon: "🌳" },
+            { id: 24, name: "SUPREME: Galaxy Slicer", baseChance: 0.0000004, color: "SUPREME", power: 800000, rarity: "Supreme", icon: "🌌" },
+            { id: 25, name: "SUPREME: Nebula Cleaver", baseChance: 0.00000022, color: "SUPREME", power: 1200000, rarity: "Supreme", icon: "🪐" },
+            { id: 26, name: "SUPREME: Supercluster Blade", baseChance: 0.00000012, color: "SUPREME", power: 1800000, rarity: "Supreme", icon: "🌠" },
+            { id: 27, name: "SUPREME: Quasar Pike", baseChance: 0.000000065, color: "SUPREME", power: 2600000, rarity: "Supreme", icon: "💫" },
+            { id: 28, name: "SUPREME: Singularity Edge", baseChance: 0.000000035, color: "SUPREME", power: 3800000, rarity: "Supreme", icon: "🌀" },
+            { id: 29, name: "TRANSCENDENT: Infinity Edge", baseChance: 0.000000018, color: "TRANSCENDENT", power: 5500000, rarity: "Transcendent", icon: "💎" },
+            { id: 30, name: "TRANSCENDENT: Eternity Blade", baseChance: 0.000000009, color: "TRANSCENDENT", power: 8000000, rarity: "Transcendent", icon: "💠" },
+            { id: 31, name: "TRANSCENDENT: Omniverse Staff", baseChance: 0.0000000045, color: "TRANSCENDENT", power: 12000000, rarity: "Transcendent", icon: "🔮" },
+            { id: 32, name: "TRANSCENDENT: Zenith Harvester", baseChance: 0.0000000022, color: "TRANSCENDENT", power: 18000000, rarity: "Transcendent", icon: "⚡" },
+            { id: 33, name: "TRANSCENDENT: Absolute Void", baseChance: 0.000000001, color: "TRANSCENDENT", power: 25000000, rarity: "Transcendent", icon: "⚛️" }
+        ];
+
+        const ALL_PETS = [
+            { id: 0, name: "Slime Pet", baseChance: 0.40, color: "#2ecc71", power: 4, rarity: "Common", icon: "🟢" },
+            { id: 1, name: "Tiny Bat", baseChance: 0.28, color: "#2ecc71", power: 10, rarity: "Common", icon: "🦇" },
+            { id: 2, name: "Wolf Pet", baseChance: 0.15, color: "#e74c3c", power: 25, rarity: "Rare", icon: "🐺" },
+            { id: 3, name: "Fire Fox", baseChance: 0.08, color: "#e74c3c", power: 55, rarity: "Rare", icon: "🦊" },
+            { id: 4, name: "Demon Dragon", baseChance: 0.04, color: "#5f27cd", power: 120, rarity: "Epic", icon: "🐉" },
+            { id: 5, name: "Shadow Panther", baseChance: 0.02, color: "#5f27cd", power: 260, rarity: "Epic", icon: "🐆" },
+            { id: 6, name: "Phoenix Mythic", baseChance: 0.008, color: "#e84393", power: 550, rarity: "Legendary", icon: "🦅" },
+            { id: 7, name: "Frost Griffin", baseChance: 0.0035, color: "#e84393", power: 950, rarity: "Legendary", icon: "🦅" },
+            { id: 8, name: "Thunder Tiger", baseChance: 0.0018, color: "#e84393", power: 1600, rarity: "Legendary", icon: "🐅" },
+            { id: 9, name: "Magma Turtle", baseChance: 0.0009, color: "#e84393", power: 2500, rarity: "Legendary", icon: "🐢" },
+            { id: 10, name: "Gale Falcon", baseChance: 0.00045, color: "#e84393", power: 3800, rarity: "Legendary", icon: "🦅" },
+            { id: 11, name: "Celestial Spirit", baseChance: 0.00025, color: "#48dbfb", power: 5500, rarity: "Mythic", icon: "👻" },
+            { id: 12, name: "Astral Pegasus", baseChance: 0.00013, color: "#48dbfb", power: 8500, rarity: "Mythic", icon: "🦄" },
+            { id: 13, name: "Solar Sphinx", baseChance: 0.00007, color: "#48dbfb", power: 13000, rarity: "Mythic", icon: "🦁" },
+            { id: 14, name: "Void Chimera", baseChance: 0.000035, color: "#48dbfb", power: 19000, rarity: "Mythic", icon: "🐉" },
+            { id: 15, name: "Nebula Kraken", baseChance: 0.000018, color: "#48dbfb", power: 28000, rarity: "Mythic", icon: "🐙" },
+            { id: 16, name: "SUPREME: Astral Sprite", baseChance: 0.000009, color: "SUPREME", power: 42000, rarity: "Supreme", icon: "✨" },
+            { id: 17, name: "SUPREME: Cosmic Wyvern", baseChance: 0.0000045, color: "SUPREME", power: 65000, rarity: "Supreme", icon: "🐲" },
+            { id: 18, name: "SUPREME: Galaxy Hydra", baseChance: 0.0000022, color: "SUPREME", power: 95000, rarity: "Supreme", icon: "🐍" },
+            { id: 19, name: "SUPREME: Supernova Chimera", baseChance: 0.0000011, color: "SUPREME", power: 140000, rarity: "Supreme", icon: "🐯" },
+            { id: 20, name: "SUPREME: Singularity Beast", baseChance: 0.0000055, color: "SUPREME", power: 200000, rarity: "Supreme", icon: "🦁" },
+            { id: 21, name: "TRANSCENDENT: Nebula Guardian", baseChance: 0.00000028, color: "TRANSCENDENT", power: 300000, rarity: "Transcendent", icon: "🌟" },
+            { id: 22, name: "TRANSCENDENT: Eternity Dragon", baseChance: 0.00000014, color: "TRANSCENDENT", power: 450000, rarity: "Transcendent", icon: "🐲" },
+            { id: 23, name: "TRANSCENDENT: Omniverse Phoenix", baseChance: 0.00000007, color: "TRANSCENDENT", power: 650000, rarity: "Transcendent", icon: "🔥" },
+            { id: 24, name: "TRANSCENDENT: Zenith Titan", baseChance: 0.000000035, color: "TRANSCENDENT", power: 950000, rarity: "Transcendent", icon: "🦍" },
+            { id: 25, name: "TRANSCENDENT: Absolute Leviathan", baseChance: 0.000000016, color: "TRANSCENDENT", power: 1400000, rarity: "Transcendent", icon: "🐋" }
+        ];
+
+        const WEAPON_TIERS = [
+            { name: "⚔️ Tier 1: Basic Weapon Pack", cost: 50, luckMultiplier: 1.0, desc: "Standard 1x Luck roll." },
+            { name: "🛡️ Tier 2: Iron Weapon Pack", cost: 1750, luckMultiplier: 5.0, desc: "Enhanced 5x Luck roll." },
+            { name: "🔥 Tier 3: Epic Weapon Pack", cost: 10000, luckMultiplier: 20.0, desc: "Powerful 20x Luck roll." },
+            { name: "⚡ Tier 4: Mythic Weapon Pack", cost: 50000, luckMultiplier: 50.0, desc: "Extreme 50x Luck roll." },
+            { name: "🌌 Tier 5: Supreme Weapon Pack", cost: 250000, luckMultiplier: 100.0, desc: "Ultimate 100x Luck roll!" }
+        ];
+
+        const PET_TIERS = [
+            { name: "🟢 Tier 1: Slime Pet Pack", cost: 100, luckMultiplier: 1.0, desc: "Standard 1x Luck pet roll." },
+            { name: "🐺 Tier 2: Beast Pet Pack", cost: 3750, luckMultiplier: 5.0, desc: "Enhanced 5x Luck pet roll." },
+            { name: "🐉 Tier 3: Dragon Pet Pack", cost: 17500, luckMultiplier: 20.0, desc: "Powerful 20x Luck pet roll." },
+            { name: "👻 Tier 4: Spirit Pet Pack", cost: 75000, luckMultiplier: 50.0, desc: "Extreme 50x Luck pet roll." },
+            { name: "🌟 Tier 5: Nebula Pet Pack", cost: 375000, luckMultiplier: 100.0, desc: "Ultimate 100x Luck pet roll!" }
+        ];
+
+        const MONSTER_COLORS = ["#a55eea", "#26de81", "#ff7979", "#4b7bec", "#fd9644"];
+
+        let rolls = 0, coins = 500, gems = 10, tokens = 0, inventory = {};
+        let luckPct = 0, luckCost = 2, luckMulti = 1.0; 
+        let hpBonusPct = 0, hpCost = 2;
+        let attackSpeedBonus = 0, speedCost = 3, baseAttackCooldown = 1200;
+        let fastRollBonus = 0, fastRollCost = 3;
+        let critMultiplier = 1.5; 
+
+        let autoWeaponInterval = null, autoPetInterval = null;
+        let autoFight = true;
+        let autoWave = false; 
+        let lastManualAttackTime = 0; 
+
+        let currentWave = 1, maxUnlockedWave = 1, pwr = 10;
+        let playerHp = 100, playerMaxHp = 100;
+        
+        let player = { x: 60, y: 110, tx: 60, ty: 110, weaponId: 0, weaponColor: "#a6a6a6", isAttacking: false, attackProgress: 0, hasDealtDamage: false };
+        let pet = { x: 30, y: 110, color: null, pwr: 0, icon: "🟢" };
+        let monster = { x: 260, y: 110, r: 24, hit: 0, anim: 0, isBoss: false, color: "#a55eea", sides: 8, hp: 120, maxHp: 120, isEnraged: false };
+        let texts = [], lastAtk = 0, lastPetAtk = 0, lastMonsterAtk = 0;
+
+        window.openGuideModal = function() { document.getElementById('guideModal').style.display = 'flex'; }
+        window.closeGuideModal = function() { document.getElementById('guideModal').style.display = 'none'; }
+
+        window.toggleInfoDropdown = function() {
+            let content = document.getElementById('infoDropdownContent');
+            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+        }
+
+        window.openAuthModal = function() { document.getElementById('authModal').style.display = 'flex'; }
+        window.closeAuthModal = function() { document.getElementById('authModal').style.display = 'none'; }
+        window.openPatchNotesModal = function() { document.getElementById('patchNotesModal').style.display = 'flex'; }
+        window.closePatchNotesModal = function() { document.getElementById('patchNotesModal').style.display = 'none'; }
+
+        function formatEmail(user) {
+            return user.includes('@') ? user : `${user}@rpggame.local`;
+        }
+
+        window.registerUser = async function() {
+            const u = document.getElementById('authUsername').value.trim();
+            const p = document.getElementById('authPassword').value;
+            const msg = document.getElementById('authMsg');
+            if (!u || !p) { msg.innerText = "Fill all fields!"; return; }
+            if (!supabaseClient) { msg.innerText = "Cloud service not available."; return; }
+
+            const email = formatEmail(u);
+            const { data, error } = await supabaseClient.auth.signUp({ email, password: p });
+            
+            if (error) {
+                msg.innerText = error.message;
+            } else {
+                msg.style.color = "#2ecc71";
+                msg.innerText = "Registered & Logged in successfully!";
+                currentUser = data.user;
+                document.getElementById('userStatus').innerText = u;
+                document.getElementById('authBtn').innerText = "Logout";
+                document.getElementById('authBtn').onclick = logoutUser;
+                saveGame();
+                setTimeout(closeAuthModal, 1200);
+            }
+        }
+
+        window.loginUser = async function() {
+            const u = document.getElementById('authUsername').value.trim();
+            const p = document.getElementById('authPassword').value;
+            const msg = document.getElementById('authMsg');
+            if (!u || !p) { msg.innerText = "Fill all fields!"; return; }
+            if (!supabaseClient) { msg.innerText = "Cloud service not available."; return; }
+
+            const email = formatEmail(u);
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: p });
+
+            if (error) {
+                msg.innerText = error.message;
+            } else {
+                currentUser = data.user;
+                document.getElementById('userStatus').innerText = u;
+                document.getElementById('authBtn').innerText = "Logout";
+                document.getElementById('authBtn').onclick = logoutUser;
+                await loadCloudData();
+                closeAuthModal();
+            }
+        }
+
+        window.logoutUser = async function() {
+            if (supabaseClient) await supabaseClient.auth.signOut();
+            currentUser = null;
+            document.getElementById('userStatus').innerText = "Guest (Local)";
+            document.getElementById('authBtn').innerText = "Login / Register";
+            document.getElementById('authBtn').onclick = openAuthModal;
+            openAuthModal();
+        }
+
+        async function saveGame() {
+            if (autoPetInterval) return;
+
+            antiCheatCheck();
+            const saveData = { 
+                rolls, coins, gems, tokens, luckPct, luckCost, hpBonusPct, hpCost, attackSpeedBonus, speedCost, fastRollBonus, fastRollCost, critMultiplier,
+                inventory, currentWave, maxUnlockedWave, pwr, 
+                playerWeaponId: player.weaponId, playerWeaponColor: player.weaponColor, 
+                petColor: pet.color, petPwr: Math.max(0, pet.pwr || 0), petIcon: pet.icon,
+                username: currentUser ? currentUser.email.split('@')[0] : "Player"
+            };
+
+            localStorage.setItem(_0x1a2b[2], JSON.stringify(saveData));
+
+            if (currentUser && supabaseClient) {
+                await supabaseClient.from(_0x1a2b[3]).upsert({
+                    id: currentUser.id,
+                    username: currentUser.email.split('@')[0],
+                    max_wave: maxUnlockedWave,
+                    save_data: saveData,
+                    updated_at: new Date()
+                }, { onConflict: 'id' });
+            }
+        }
+
+        async function loadCloudData() {
+            if (!currentUser || !supabaseClient) return;
+            const { data, error } = await supabaseClient.from(_0x1a2b[3]).select('save_data').eq('id', currentUser.id).single();
+            if (data && data.save_data) {
+                applySaveData(data.save_data);
+            }
+        }
+
+        function loadUserData() {
+            const saved = localStorage.getItem(_0x1a2b[2]);
+            if (saved) applySaveData(JSON.parse(saved));
+        }
+
+        function applySaveData(data) {
+            rolls = data.rolls ?? rolls; coins = data.coins ?? coins; gems = data.gems ?? gems; tokens = data.tokens ?? tokens;
+            luckPct = data.luckPct ?? luckPct; luckCost = data.luckCost ?? luckCost;
+            hpBonusPct = data.hpBonusPct ?? hpBonusPct; hpCost = data.hpCost ?? hpCost;
+            attackSpeedBonus = data.attackSpeedBonus ?? attackSpeedBonus; speedCost = data.speedCost ?? speedCost;
+            fastRollBonus = data.fastRollBonus ?? fastRollBonus; fastRollCost = data.fastRollCost ?? fastRollCost;
+            critMultiplier = 1.5; 
+            inventory = data.inventory ?? inventory;
+            currentWave = data.currentWave ?? currentWave; maxUnlockedWave = data.maxUnlockedWave ?? maxUnlockedWave;
+            pwr = data.pwr ?? pwr; player.weaponId = data.playerWeaponId ?? player.weaponId;
+            player.weaponColor = data.playerWeaponColor ?? player.weaponColor; 
+            pet.color = data.petColor ?? pet.color; 
+            pet.pwr = Math.max(0, data.petPwr ?? pet.pwr); 
+            pet.icon = data.petIcon ?? pet.icon;
+            antiCheatCheck();
+            recalcStats(); updateUI(); resetMonster();
+            playerHp = playerMaxHp;
+        }
+
+        function recalcStats() {
+            luckMulti = (1.0 + (luckPct / 100));
+            let rawPwr = 10;
+            let totalItemsCount = 0;
+
+            for (let k in inventory) {
+                let count = sanitizeNumber(inventory[k].count, 0, 1000000);
+                let isWeapon = ALL_WEAPONS.some(w => w.name === k);
+                let isPet = ALL_PETS.some(p => p.name === k);
+                if (isWeapon) {
+                    rawPwr += Math.max(0, inventory[k].pwr || 0) * count;
+                }
+                if (isWeapon || isPet) {
+                    totalItemsCount += count;
+                }
+            }
+
+            pwr = Math.floor(rawPwr * 1.15);
+
+            let itemHpBonus = totalItemsCount * 0.1;
+            playerMaxHp = 100 + (hpBonusPct * 7) + Math.floor(itemHpBonus);
+            if (playerHp > playerMaxHp) playerHp = playerMaxHp;
+        }
+
+        function updateUI() {
+            document.getElementById('rolls').innerText = rolls.toLocaleString();
+            document.getElementById('coins').innerText = Math.floor(coins).toLocaleString();
+            document.getElementById('gems').innerText = gems.toLocaleString();
+            document.getElementById('tokens').innerText = tokens.toLocaleString();
+
+            recalcStats();
+            document.getElementById('statLuckMulti').innerText = luckMulti.toFixed(2);
+            document.getElementById('luckPct').innerText = luckPct.toFixed(0);
+            document.getElementById('luckCost').innerText = luckCost;
+            document.getElementById('hpBonusPct').innerText = (hpBonusPct * 7);
+            document.getElementById('hpCost').innerText = hpCost;
+            document.getElementById('atkSpeedBonus').innerText = attackSpeedBonus;
+            document.getElementById('speedCost').innerText = speedCost;
+            document.getElementById('fastRollBonus').innerText = fastRollBonus;
+            document.getElementById('fastRollCost').innerText = fastRollCost;
+            document.getElementById('critBonus').innerText = critMultiplier.toFixed(2);
+            
+            document.getElementById('wave').innerText = currentWave + " / " + maxUnlockedWave;
+            document.getElementById('pwr').innerText = Math.max(1, Math.floor(pwr)).toLocaleString();
+            document.getElementById('hpDisplay').innerText = Math.max(0, Math.floor(playerHp));
+            document.getElementById('maxHpDisplay').innerText = playerMaxHp;
+        }
+
+        window.toggleUpgradesModal = function(show) { document.getElementById('upgradesModal').style.display = show ? 'flex' : 'none'; }
+        window.toggleIndexModal = function(show) { 
+            document.getElementById('indexModal').style.display = show ? 'flex' : 'none'; 
+            if (show) renderIndex('weapons');
+        }
+        window.toggleTreeModal = function(show) { document.getElementById('treeModal').style.display = show ? 'flex' : 'none'; }
+        window.toggleFishingModal = function(show) { document.getElementById('fishingModal').style.display = show ? 'flex' : 'none'; }
+        window.openAuraModal = function() { document.getElementById('auraModal').style.display = 'flex'; }
+        window.closeAuraModal = function() { document.getElementById('auraModal').style.display = 'none'; }
+
+        window.openLeaderboardModal = async function() {
+            document.getElementById('leaderboardModal').style.display = 'flex';
+            let container = document.getElementById('leaderboardContainer');
+            container.innerHTML = "<div style='text-align:center; padding:15px;'>Loading global rankings securely...</div>";
+
+            if (!supabaseClient) {
+                container.innerHTML = "<div style='text-align:center; color:#e74c3c;'>Supabase client not initialized.</div>";
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from(_0x1a2b[3])
+                .select('username, max_wave')
+                .order('max_wave', { ascending: false })
+                .limit(10);
+
+            if (error) {
+                container.innerHTML = `<div style='text-align:center; color:#e74c3c;'>Error loading leaderboard: ${error.message}</div>`;
+            } else if (!data || data.length === 0) {
+                container.innerHTML = "<div style='text-align:center; color:#8a8d9b;'>No players found yet. Be the first!</div>";
+            } else {
+                container.innerHTML = "";
+                data.forEach((row, idx) => {
+                    let medal = idx === 0 ? "🥇" : (idx === 1 ? "🥈" : (idx === 2 ? "🥉" : `#${idx + 1}`));
+                    container.innerHTML += `
+                        <div class="lb-row" style="background:#0d0e12; padding:6px 10px; border-radius:6px; margin-bottom:4px; border:1px solid #2a2d37;">
+                            <div><b>${medal} ${row.username || 'Anonymous'}</b></div>
+                            <div style="color:var(--gold); font-weight:bold;">Wave: ${row.max_wave || 1}</div>
+                        </div>
+                    `;
+                });
+            }
+        }
+        window.closeLeaderboardModal = function() { document.getElementById('leaderboardModal').style.display = 'none'; }
+
+        window.openWeaponTiersModal = function() {
+            let container = document.getElementById('weaponTiersContainer');
+            container.innerHTML = "";
+            WEAPON_TIERS.forEach((tier, idx) => {
+                container.innerHTML += `
+                    <div class="tier-row" style="background:#0d0e12; padding:8px; border-radius:6px; margin-bottom:4px; border:1px solid #2a2d37; flex-direction:column; gap:5px; align-items:flex-start;">
+                        <div style="width:100%; text-align:left;">
+                            <b style="color:var(--gold);">${tier.name}</b>
+                            <div style="font-size:9px; color:#8a8d9b;">${tier.desc}</div>
+                        </div>
+                        <div style="display:flex; gap:4px; width:100%; justify-content:flex-end;">
+                            <button class="btn-gold" style="padding:4px 8px; font-size:10px;" onclick="openMultiRoll('weapon', ${idx}, 1)">x1 (💰${tier.cost.toLocaleString()})</button>
+                            <button class="btn-gold" style="padding:4px 8px; font-size:10px;" onclick="openMultiRoll('weapon', ${idx}, 5)">x5 (💰${(tier.cost * 5).toLocaleString()})</button>
+                            <button class="btn-gold" style="padding:4px 8px; font-size:10px;" onclick="openMultiRoll('weapon', ${idx}, 10)">x10 (💰${(tier.cost * 10).toLocaleString()})</button>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('weaponTiersModal').style.display = 'flex';
+        }
+        window.closeWeaponTiersModal = function() { document.getElementById('weaponTiersModal').style.display = 'none'; }
+
+        window.openPetTiersModal = function() {
+            let container = document.getElementById('petTiersContainer');
+            container.innerHTML = "";
+            PET_TIERS.forEach((tier, idx) => {
+                container.innerHTML += `
+                    <div class="tier-row" style="background:#0d0e12; padding:8px; border-radius:6px; margin-bottom:4px; border:1px solid #2a2d37; flex-direction:column; gap:5px; align-items:flex-start;">
+                        <div style="width:100%; text-align:left;">
+                            <b style="color:var(--pet);">${tier.name}</b>
+                            <div style="font-size:9px; color:#8a8d9b;">${tier.desc}</div>
+                        </div>
+                        <div style="display:flex; gap:4px; width:100%; justify-content:flex-end;">
+                            <button class="btn-pet" style="padding:4px 8px; font-size:10px;" onclick="openMultiRoll('pet', ${idx}, 1)">x1 (💰${tier.cost.toLocaleString()})</button>
+                            <button class="btn-pet" style="padding:4px 8px; font-size:10px;" onclick="openMultiRoll('pet', ${idx}, 5)">x5 (💰${(tier.cost * 5).toLocaleString()})</button>
+                            <button class="btn-pet" style="padding:4px 8px; font-size:10px;" onclick="openMultiRoll('pet', ${idx}, 10)">x10 (💰${(tier.cost * 10).toLocaleString()})</button>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('petTiersModal').style.display = 'flex';
+        }
+        window.closePetTiersModal = function() { document.getElementById('petTiersModal').style.display = 'none'; }
+
+        window.buyUpgrade = function(type) {
+            antiCheatCheck();
+            if (type === 'hp' && gems >= hpCost) {
+                gems -= hpCost; hpBonusPct += 1; hpCost = Math.floor(hpCost * 1.3) + 1;
+            } else if (type === 'luck' && gems >= luckCost) {
+                gems -= luckCost; luckPct += 5; luckCost = Math.floor(luckCost * 1.35) + 1;
+            } else if (type === 'speed' && gems >= speedCost) {
+                gems -= speedCost; attackSpeedBonus += 2; speedCost = Math.floor(speedCost * 1.4) + 1;
+            } else if (type === 'fastRoll' && gems >= fastRollCost) {
+                gems -= fastRollCost; fastRollBonus += 2; fastRollCost = Math.floor(fastRollCost * 1.4) + 1;
+            }
+            recalcStats();
+            updateUI(); 
+            saveGame();
+        }
+
+        window.openMultiRoll = function(type, tierIndex, count) {
+            antiCheatCheck();
+            let tiers = type === 'weapon' ? WEAPON_TIERS : PET_TIERS;
+            if (tierIndex < 0 || tierIndex >= tiers.length) return;
+            count = Math.min(Math.max(1, sanitizeNumber(count, 1, 10)), 10);
+            let totalCost = tiers[tierIndex].cost * count;
+
+            if (coins < totalCost) return;
+            coins -= totalCost;
+
+            let list = type === 'weapon' ? ALL_WEAPONS : ALL_PETS;
+            let tierLuckMulti = tiers[tierIndex].luckMultiplier;
+            let totalLuck = luckMulti * tierLuckMulti;
+
+            let lastWon = null;
+
+            for (let c = 0; c < count; c++) {
+                rolls++;
+                let adjustedWeights = list.map(item => ({ item, weight: item.baseChance * totalLuck }));
+                let totalWeight = adjustedWeights.reduce((sum, w) => sum + w.weight, 0);
+                
+                let randomVal = Math.random() * totalWeight;
+                let currentSum = 0;
+                let won = list[0];
+                
+                for (let w of adjustedWeights) {
+                    currentSum += w.weight;
+                    if (randomVal <= currentSum) {
+                        won = w.item;
+                        break;
+                    }
+                }
+
+                lastWon = won;
+                inventory[won.name] = { 
+                    count: (inventory[won.name]?.count || 0) + 1, 
+                    color: won.color, 
+                    pwr: Math.max(0, won.power), 
+                    icon: won.icon 
+                };
+
+                if (type === 'weapon' && Math.max(0, won.power) > (getWeaponPower(player.weaponId) || 0)) {
+                    player.weaponId = won.id; player.weaponColor = won.color;
+                }
+                if (type === 'pet' && Math.max(0, won.power) > (pet.pwr || 0)) { 
+                    pet.color = won.color; pet.pwr = Math.max(0, won.power); pet.icon = won.icon; 
+                }
+            }
+
+            if (lastWon) {
+                let el = document.getElementById('itemName');
+                el.innerHTML = `(${count}x) ${lastWon.icon} ${lastWon.name}`;
+                el.className = lastWon.color === "TRANSCENDENT" ? "item-display rarity-transcendent" : (lastWon.color === "SUPREME" ? "item-display rarity-supreme" : "item-display");
+                if (lastWon.color !== "SUPREME" && lastWon.color !== "TRANSCENDENT") el.style.color = lastWon.color;
+            }
+
+            antiCheatCheck();
+            recalcStats(); renderInv(); updateUI(); saveGame();
+        }
+
+        function getWeaponPower(id) {
+            for (let w of ALL_WEAPONS) { if (w.id === id) return Math.max(0, w.power); }
+            return 0;
+        }
+
+        window.renderIndex = function(category) {
+            let items = category === 'weapons' ? ALL_WEAPONS : ALL_PETS;
+            let container = document.getElementById('indexList');
+            container.innerHTML = "";
+
+            items.forEach(item => {
+                let owned = inventory[item.name] && inventory[item.name].count > 0;
+                let isTrans = item.color === "TRANSCENDENT";
+                let isSupreme = item.color === "SUPREME";
+                
+                let nameClass = isTrans ? 'rarity-transcendent' : (isSupreme ? 'rarity-supreme' : '');
+                let textColor = owned ? (isTrans || isSupreme ? 'auto' : item.color) : '#888';
+
+                container.innerHTML += `
+                    <div class="index-item ${owned ? '' : 'locked'}">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:16px;">${item.icon}</span>
+                            <div>
+                                <div class="${nameClass}" style="font-weight:bold; color:${textColor}">${owned ? item.name : '???'}</div>
+                                <div style="font-size:9px; color:#aaa;">Rarity: ${item.rarity} | Pwr: +${Math.max(0, item.power).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div style="font-weight:bold">${owned ? '✅ x' + inventory[item.name].count : '🔒'}</div>
+                    </div>
+                `;
+            });
+        }
+
+        window.toggleAutoPack = function(type) {
+            if (type === 'weapon') {
+                let btn = document.getElementById('autoWeaponBtn');
+                if (autoWeaponInterval) {
+                    clearInterval(autoWeaponInterval); autoWeaponInterval = null;
+                    btn.innerText = "AUTO WEAPON: OFF"; btn.classList.add('btn-auto-off');
+                } else {
+                    autoWeaponInterval = setInterval(() => { 
+                        if (coins >= WEAPON_TIERS[0].cost) openMultiRoll('weapon', 0, 1); 
+                    }, Math.max(250, 400 - (fastRollBonus * 10)));
+                    btn.innerText = "AUTO WEAPON: ON"; btn.classList.remove('btn-auto-off');
+                }
+            } else if (type === 'pet') {
+                let btn = document.getElementById('autoPetBtn');
+                if (autoPetInterval) {
+                    clearInterval(autoPetInterval); autoPetInterval = null;
+                    btn.innerText = "AUTO PET: OFF"; btn.classList.add('btn-auto-off');
+                    saveGame();
+                } else {
+                    autoPetInterval = setInterval(() => { 
+                        if (coins >= PET_TIERS[0].cost) openMultiRoll('pet', 0, 1); 
+                    }, Math.max(300, 600 - (fastRollBonus * 12)));
+                    btn.innerText = "AUTO PET: ON"; btn.classList.remove('btn-auto-off');
+                }
+            }
+        }
+
+        window.toggleAutoFight = function() {
+            autoFight = !autoFight;
+            let btn = document.getElementById('autoFightBtn');
+            btn.innerText = "Auto Attack: " + (autoFight ? "ON" : "OFF");
+            if (autoFight) btn.classList.remove('btn-auto-off'); else btn.classList.add('btn-auto-off');
+        }
+
+        window.toggleAutoWave = function() {
+            autoWave = !autoWave;
+            let btn = document.getElementById('autoWaveBtn');
+            btn.innerText = "Auto Wave: " + (autoWave ? "ON" : "OFF");
+            if (autoWave) btn.classList.remove('btn-auto-off'); else btn.classList.add('btn-auto-off');
+        }
+
+        window.manualAttack = function() { 
+            let now = Date.now();
+            if (now - lastManualAttackTime < 500) return; 
+            lastManualAttackTime = now;
+
+            if (!player.isAttacking) {
+                player.isAttacking = true;
+                player.attackProgress = 0;
+                player.hasDealtDamage = false;
+            }
+        }
+
+        function renderInv() {
+            let el = document.getElementById('invList'); el.innerHTML = "";
+            for (let k in inventory) {
+                let itemData = inventory[k];
+                let isTrans = itemData.color === "TRANSCENDENT";
+                let isSupreme = itemData.color === "SUPREME";
+                let nameClass = isTrans ? 'rarity-transcendent' : (isSupreme ? 'rarity-supreme' : '');
+                let textColor = isTrans || isSupreme ? 'auto' : itemData.color;
+
+                el.innerHTML += `
+                    <div class="inv-item">
+                        <span class="${nameClass}" style="color:${textColor}">${itemData.icon} ${k}</span>
+                        <span>x${itemData.count}</span>
+                    </div>`;
+            }
+        }
+
+        window.changeWave = function(dir) {
+            let target = currentWave + dir;
+            if (target >= 1 && target <= maxUnlockedWave) { 
+                currentWave = target; 
+                resetMonster(); 
+                playerHp = playerMaxHp; 
+                updateUI(); 
+                saveGame(); 
+            }
+        }
+
+        function resetMonster() {
+            monster.isBoss = (currentWave % 10 === 0);
+            monster.isEnraged = false;
+            
+            let calculatedMaxHp;
+            if (monster.isBoss) {
+                monster.r = 42; monster.color = "#ff4757"; monster.sides = 10;
+                calculatedMaxHp = Math.floor(450 * Math.pow(1.35, currentWave - 1) * 0.3);
+            } else {
+                monster.r = 20 + Math.floor(Math.random() * 10);
+                monster.color = MONSTER_COLORS[currentWave % MONSTER_COLORS.length];
+                monster.sides = 5 + (currentWave % 5);
+                calculatedMaxHp = Math.floor(120 * Math.pow(1.3, currentWave - 1) * 0.3);
+            }
+            
+            monster.maxHp = Math.max(10, calculatedMaxHp);
+            monster.hp = monster.maxHp;
+        }
+
+        const cvs = document.getElementById('canvas'), ctx = cvs.getContext('2d');
+
+        function hitMonster(dmg, isPet = false) {
+            let cleanDmg = Math.max(1, Math.floor(dmg));
+            let finalDmg = cleanDmg;
+            let isCrit = false;
+            
+            if (!isPet && Math.random() < 0.25) { 
+                finalDmg = Math.floor(cleanDmg * critMultiplier);
+                isCrit = true;
+            }
+
+            monster.hp -= finalDmg; 
+            monster.hit = 5;
+            
+            let color = isPet ? "#00cec9" : (isCrit ? "#f1c40f" : "#ff4757");
+            let textPrefix = isCrit ? "CRIT! -" : "-";
+            texts.push({ t: textPrefix + finalDmg.toLocaleString(), x: monster.x + (Math.random()*30-15), y: monster.y - 30, a: 1.0, color: color });
+
+            let lifesteal = Math.max(1, Math.floor(finalDmg * 0.015));
+            playerHp = Math.min(playerMaxHp, playerHp + lifesteal);
+            texts.push({ t: "+" + lifesteal.toLocaleString() + " ❤️", x: player.x + (Math.random()*20-10), y: player.y - 45, a: 1.0, color: "#2ecc71" });
+
+            if (monster.isBoss && !monster.isEnraged && (monster.hp / monster.maxHp) <= 0.40) {
+                monster.isEnraged = true;
+                monster.color = "#ff0000";
+                texts.push({ t: "😡 BOSS ENRAGED!", x: monster.x, y: monster.y - 50, a: 1.5, color: "#ff0000" });
+            }
+
+            if (monster.hp <= 0) {
+                monster.hp = 0;
+                
+                let waveCoinsGain = currentWave * 10;
+                let waveGemsGain = Number((currentWave * 0.1).toFixed(1));
+
+                coins += waveCoinsGain;
+                gems += waveGemsGain;
+
+                if (currentWave === maxUnlockedWave) { 
+                    maxUnlockedWave++; 
+                }
+
+                if (autoWave) {
+                    currentWave++;
+                } else {
+                    if (currentWave === maxUnlockedWave - 1) currentWave++;
+                }
+
+                playerHp = playerMaxHp; 
+                antiCheatCheck();
+                resetMonster(); updateUI(); saveGame();
+            }
+        }
+
+        function hitPlayer(dmg) {
+            let cleanDmg = Math.max(1, Math.floor(dmg));
+            playerHp -= cleanDmg;
+            if (playerHp < 0) playerHp = 0;
+            updateUI();
+            texts.push({ t: "-" + cleanDmg.toLocaleString(), x: player.x + (Math.random()*20-10), y: player.y - 25, a: 1.0, color: "#ff6b81" });
+            
+            if (playerHp <= 0) {
+                if (currentWave > 1) {
+                    currentWave--;
+                }
+                playerHp = playerMaxHp; 
+                resetMonster();
+                updateUI();
+                saveGame();
+                texts.push({ t: "DEFEATED! -1 Wave", x: player.x, y: player.y - 50, a: 1.5, color: "#e74c3c" });
+            }
+        }
+
+        function drawPlayer(x, y) {
+            ctx.fillStyle = "#3498db"; ctx.beginPath(); ctx.arc(x, y, 16, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = "#2980b9"; ctx.lineWidth = 3; ctx.stroke();
+            
+            ctx.fillStyle = "#ecf0f1"; ctx.beginPath(); ctx.arc(x + 5, y - 4, 6, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#e74c3c"; ctx.fillRect(x + 3, y - 6, 4, 3);
+
+            let slash = player.isAttacking ? Math.sin(player.attackProgress * Math.PI) * 1.2 : 0;
+            ctx.save(); ctx.translate(x + 14, y + 2); ctx.rotate(slash);
+            
+            ctx.fillStyle = player.weaponColor;
+            ctx.fillRect(0, -5, 28, 10);
+            ctx.fillStyle = "#fff"; ctx.fillRect(3, -2, 22, 4);
+            ctx.restore();
+
+            if (player.isAttacking) {
+                ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+                ctx.beginPath(); ctx.arc(monster.x - 25, monster.y, 18 * Math.sin(player.attackProgress * Math.PI), 0, Math.PI*2); ctx.fill();
+            }
+
+            let pBarW = 46;
+            ctx.fillStyle = "#2f3542"; ctx.fillRect(x - pBarW/2, y - 28, pBarW, 6);
+            ctx.fillStyle = "#2ed573"; ctx.fillRect(x - pBarW/2, y - 28, pBarW * Math.max(0, playerHp / playerMaxHp), 6);
+            ctx.fillStyle = "#fff"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(`HP: ${Math.max(0, Math.floor(playerHp))}/${playerMaxHp}`, x, y - 32);
+        }
+
+        function drawMonster(x, y, r, isBoss, hit, color, sides) {
+            ctx.save();
+            ctx.fillStyle = hit > 0 ? "#ffffff" : color; ctx.beginPath();
+            for (let i = 0; i < sides; i++) {
+                let a = (i / sides) * Math.PI * 2;
+                let radius = i % 2 === 0 ? r : r * 0.65;
+                let px = x + Math.cos(a) * radius, py = y + Math.sin(a) * radius;
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = monster.isEnraged ? "#ff0000" : "#c0392b"; 
+            ctx.lineWidth = isBoss ? (monster.isEnraged ? 8 : 5) : 3; 
+            ctx.stroke();
+
+            ctx.fillStyle = monster.isEnraged ? "#ff0000" : "#f1c40f";
+            ctx.beginPath();
+            ctx.arc(x - 6, y - 5, 4, 0, Math.PI*2);
+            ctx.arc(x + 6, y - 5, 4, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.fillStyle = "#000";
+            ctx.beginPath();
+            ctx.arc(x - 6, y - 5, 1.5, 0, Math.PI*2);
+            ctx.arc(x + 6, y - 5, 1.5, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.fillStyle = "#fff";
+            ctx.beginPath();
+            ctx.moveTo(x - 5, y + 6); ctx.lineTo(x - 2, y + 12); ctx.lineTo(x, y + 6);
+            ctx.moveTo(x, y + 6); ctx.lineTo(x + 2, y + 12); ctx.lineTo(x + 5, y + 6);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function loop(time) {
+            ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+            let speedMultiplier = 1 + (attackSpeedBonus / 100);
+            let currentCooldown = Math.max(250, baseAttackCooldown / speedMultiplier);
+
+            if (autoFight && !player.isAttacking && time - lastAtk > currentCooldown) {
+                manualAttack(); lastAtk = time;
+            }
+
+            if (pet.color && pet.pwr > 0 && time - lastPetAtk > 800) {
+                hitMonster(Math.max(1, Math.floor(pet.pwr * 0.5)), true);
+                lastPetAtk = time;
+            }
+
+            let monsterAtkInterval = (monster.isBoss && monster.isEnraged) ? 800 : 1400;
+            if (time - lastMonsterAtk > monsterAtkInterval) {
+                let baseDmg = Math.floor(10 * Math.pow(1.25, currentWave - 1));
+                if (monster.isBoss && monster.isEnraged) baseDmg *= 1.8; 
+                hitPlayer(baseDmg);
+                lastMonsterAtk = time;
+            }
+
+            let basePosX = 60;
+            let targetStrikeX = monster.x - (monster.isBoss ? 55 : 45);
+
+            if (player.isAttacking) {
+                player.attackProgress += 0.08 * speedMultiplier;
+                if (player.attackProgress <= 0.5) {
+                    player.tx = basePosX + (targetStrikeX - basePosX) * (player.attackProgress * 2);
+                } else {
+                    if (!player.hasDealtDamage) {
+                        hitMonster(Math.max(1, pwr), false);
+                        player.hasDealtDamage = true;
+                    }
+                    player.tx = targetStrikeX - (targetStrikeX - basePosX) * ((player.attackProgress - 0.5) * 2);
+                }
+
+                if (player.attackProgress >= 1) {
+                    player.isAttacking = false;
+                    player.attackProgress = 0;
+                    player.hasDealtDamage = false;
+                    player.tx = basePosX;
+                }
+            } else {
+                player.tx = basePosX;
+            }
+
+            player.x += (player.tx - player.x) * 0.3; 
+            player.y += (110 - player.y) * 0.3;
+            pet.x += (player.x - 28 - pet.x) * 0.1; pet.y += (player.y + 12 - pet.y) * 0.1;
+
+            if (pet.color && pet.pwr > 0) {
+                ctx.fillStyle = pet.color;
+                ctx.beginPath(); ctx.arc(pet.x, pet.y, 9, 0, Math.PI*2); ctx.fill();
+            }
+
+            drawPlayer(player.x, player.y);
+            monster.anim += (monster.isEnraged ? 0.12 : 0.05); 
+            let bounce = Math.sin(monster.anim) * (monster.isBoss ? (monster.isEnraged ? 10 : 6) : 4);
+            drawMonster(monster.x, monster.y + bounce, monster.r, monster.isBoss, monster.hit, monster.color, monster.sides);
+            if (monster.hit > 0) monster.hit--;
+
+            let barWidth = monster.isBoss ? 80 : 60;
+            let barY = monster.y - monster.r - (monster.isBoss ? 32 : 20) + bounce;
+            ctx.fillStyle = "#2f3542"; ctx.fillRect(monster.x - barWidth/2, barY, barWidth, monster.isBoss ? 8 : 6);
+            ctx.fillStyle = monster.isEnraged ? "#ff0000" : (monster.isBoss ? "#ff4757" : "#2ed573"); 
+            ctx.fillRect(monster.x - barWidth/2, barY, barWidth * Math.max(0, monster.hp / monster.maxHp), monster.isBoss ? 8 : 6);
+
+            for (let i = texts.length - 1; i >= 0; i--) {
+                let t = texts[i]; 
+                ctx.fillStyle = t.color;
+                ctx.font = "bold 13px sans-serif"; 
+                ctx.fillText(t.t, t.x, t.y);
+                t.y -= 1; t.a -= 0.03; 
+                if (t.a <= 0) texts.splice(i, 1);
+            }
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadUserData();
+            recalcStats(); renderInv(); resetMonster(); updateUI();
+            requestAnimationFrame(loop);
+            
+            if (supabaseClient) {
+                supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                    if (session && session.user) {
+                        currentUser = session.user;
+                        document.getElementById('userStatus').innerText = currentUser.email.split('@')[0];
+                        document.getElementById('authBtn').innerText = "Logout";
+                        document.getElementById('authBtn').onclick = logoutUser;
+                        closeAuthModal();
+                        loadCloudData();
+                    } else {
+                        openAuthModal();
+                    }
+                }).catch(err => {});
+            }
+        });
+    })();
+</script>
+</body>
+</html>

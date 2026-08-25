@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hardcore Weapons & Pets RNG RPG</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root { --bg: #0d0e12; --card: #16181e; --accent: #6c5ce7; --gold: #f1c40f; --gem: #00cec9; }
+        body { background: var(--bg); color: #fff; font-family: system-ui, sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; user-select: none; }
+        .stats-bar { display: flex; gap: 10px; background: var(--card); padding: 8px 15px; border-radius: 8px; border: 1px solid #2a2d37; font-size: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+        .main { display: flex; gap: 10px; max-width: 900px; width: 100%; flex-wrap: wrap; }
+        .panel { background: var(--card); border: 1px solid #2a2d37; border-radius: 12px; padding: 12px; flex: 1; min-width: 290px; text-align: center; }
+        .item-display { font-size: 18px; font-weight: bold; margin: 5px 0; min-height: 25px; }
+        .controls { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+        button { background: var(--accent); color: #fff; border: none; padding: 6px 10px; font-size: 11px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        button:active { transform: scale(0.95); }
+        .btn-gold { background: var(--gold); color: #000; }
+        .btn-gem { background: var(--gem); color: #000; }
+        .btn-danger { background: #e74c3c; }
+        .btn-nav { background: #34495e; padding: 2px 8px; font-size: 12px; }
+        .btn-upgrade { background: #e67e22; color: #fff; }
+        #canvas { background: #050508; border: 1px solid #333; border-radius: 8px; width: 100%; height: 220px; }
+        .inv { max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; font-size: 11px; margin-top: 5px; }
+        .inv-item { display: flex; justify-content: space-between; background: #0d0e12; padding: 3px 6px; border-radius: 4px; }
+        .auto-selector { font-size: 10px; display: flex; gap: 6px; justify-content: center; align-items: center; margin-top: 4px; }
+        #saveStatus { font-size: 10px; color: #2ecc71; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="stats-bar">
+        <div>Rolls: <span id="rolls">0</span></div>
+        <div>Coins 💰: <span id="coins" style="color:var(--gold)">100</span></div>
+        <div>Gems 💎: <span id="gems" style="color:var(--gem)">0</span></div>
+        <div>Luck 🍀: <span id="luck">0.1x</span></div>
+        <div>Power ⚔️: <span id="pwr">10</span></div>
+    </div>
+
+    <div class="main">
+        <div class="panel">
+            <div id="itemName" class="item-display" style="color: #a6a6a6;">Open a Pack!</div>
+            <div id="itemChance" style="font-size: 11px; color: #8a8d9b;">Weapon: 💰 100 | Pet: 💰 500</div>
+            <div class="controls">
+                <button class="btn-gold" onclick="openPack('weapon')">Weapon Pack (💰100)</button>
+                <button class="btn-gold" onclick="openPack('pet')">Pet Pack (💰500)</button>
+                <button class="btn-gem" onclick="buyLuck()">Upgrade Luck (💎<span id="luckCost">2</span>)</button>
+                <button class="btn-upgrade" onclick="openUpgrades()">Upgrades ⚡</button>
+                <button id="autoBtn" class="btn-danger" onclick="toggleAuto()">AUTO</button>
+            </div>
+            
+            <div class="auto-selector">
+                <span>AUTO Target:</span>
+                <label><input type="radio" name="autoType" value="weapon" checked onchange="autoType=this.value"> Weapon</label>
+                <label><input type="radio" name="autoType" value="pet" onchange="autoType=this.value"> Pet</label>
+            </div>
+
+            <div id="saveStatus">Cloud Save: Active ☁️</div>
+
+            <div style="text-align: left; margin-top: 8px;">
+                <b style="font-size: 11px;">Inventory:</b>
+                <div class="inv" id="invList"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:bold; margin-bottom:4px;">
+                <span>Battlefield ⚔️</span>
+                <div>
+                    <button class="btn-nav" onclick="changeWave(-1)">&lt;</button>
+                    <span style="color:#e74c3c; margin: 0 4px;">Wave: <span id="wave">1</span></span>
+                    <button class="btn-nav" onclick="changeWave(1)">&gt;</button>
+                </div>
+            </div>
+            <canvas id="canvas" width="340" height="220"></canvas>
+            <p style="font-size:10px; color:#8a8d9b; margin:4px 0 0 0;">Auto-combat active!</p>
+
+            <div style="margin-top: 12px; border-top: 1px solid #2a2d37; padding-top: 8px;">
+                <div style="font-size: 12px; font-weight: bold; margin-bottom: 6px; color: var(--gold);">🏆 Global Leaderboard</div>
+                <div id="leaderboardList" style="font-size: 11px; max-height: 110px; overflow-y: auto; text-align: left; display: flex; flex-direction: column; gap: 3px;">
+                    <div style="color: #8a8d9b;">Loading rankings...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    const SUPABASE_URL = 'https://vvfrdoykirlscgjxukos.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2ZnJkb3lraXJsc2Nnanh1a29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MDg2MjAsImV4cCI6MjEwMzE4NDYyMH0.Rq5qiK0ByvmybeQFfdJ_Hx_JJ5aL8N_HWxJwg_HiAak';
+
+    let supabaseClient = null;
+
+    function initSupabase() {
+        try {
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                setupRealtime();
+            }
+        } catch(e) { console.error("Supabase init error:", e); }
+    }
+
+    let playerName = localStorage.getItem('rng_player_name');
+    if (!playerName) {
+        playerName = prompt("Enter your player name (Remember it to keep your save!):") || "Hero_" + Math.floor(Math.random()*1000);
+        localStorage.setItem('rng_player_name', playerName);
+    }
+
+    const WEAPONS = [
+        { id: 0, name: "Wooden Sword", chance: 1/1, color: "#a6a6a6", power: 5, val: 1 },
+        { id: 1, name: "Iron Dagger", chance: 1/10, color: "#3498db", power: 25, val: 10 },
+        { id: 2, name: "Flame Katana", chance: 1/100, color: "#9b59b6", power: 150, val: 100 },
+        { id: 3, name: "Shadow Scythe", chance: 1/2500, color: "#f1c40f", power: 1200, val: 2500 },
+        { id: 4, name: "Cosmic Blade", chance: 1/100000, color: "#ff9f43", power: 25000, val: 100000 },
+        { id: 5, name: "Dark Plasma", chance: 1/50000000, color: "#a55eea", power: 1500000, val: 50000000 },
+        { id: 6, name: "Omega Blade (B)", chance: 1/1000000000, color: "#00d2d3", power: 100000000, val: 1000000000 },
+        { id: 7, name: "Celestial Trident (T)", chance: 1/1000000000000, color: "#ff4757", power: 50000000000, val: 1000000000000 },
+        { id: 8, name: "Godslayer (Qa)", chance: 1/1000000000000000, color: "#ff6b81", power: 20000000000000, val: 1e15 },
+        { id: 9, name: "Eternal Sx Blade", chance: 1/1000000000000000000000, color: "#74b9ff", power: 100000000000000000, val: 1e21 }
+    ];
+
+    const PETS = [
+        { name: "Slime Pet", chance: 1/1, color: "#2ecc71", power: 5, val: 1 },
+        { name: "Wolf Pet", chance: 1/20, color: "#e74c3c", power: 50, val: 20 },
+        { name: "Demon Bat", chance: 1/500, color: "#fd79a8", power: 600, val: 500 },
+        { name: "Phoenix Mythic", chance: 1/100000, color: "#e84393", power: 30000, val: 100000 },
+        { name: "Void Dragon (M)", chance: 1/10000000, color: "#8e44ad", power: 2000000, val: 10000000 },
+        { name: "Galaxy Golem (B)", chance: 1/1000000000, color: "#1289A7", power: 150000000, val: 1000000000 },
+        { name: "Chrono Spirit (T)", chance: 1/1000000000000, color: "#D6A2E8", power: 80000000000, val: 1000000000000 },
+        { name: "Universal Sx Pet", chance: 1/1000000000000000000000, color: "#fff200", power: 200000000000000000, val: 1e21 }
+    ];
+
+    let rolls = 0, coins = 100, gems = 0, luck = 0.1, luckCost = 2, inventory = {};
+    let autoInterval = null, isRolling = false, autoType = "weapon";
+    let currentWave = 1, maxUnlockedWave = 1, pwr = 10, mHp = 150, mMaxHp = 150;
+    
+    let player = { x: 50, y: 110, tx: 50, ty: 110, weaponId: 0, weaponColor: "#a6a6a6" };
+    let pet = { x: 30, y: 110, color: null };
+    let monster = { x: 260, y: 110, r: 28, hit: 0, anim: 0, isBoss: false };
+    let texts = [], lastAtk = 0;
+
+    let saveTimeout = null;
+    function saveGame() {
+        const saveData = { rolls, coins, gems, luck, luckCost, inventory, currentWave, maxUnlockedWave, pwr, playerWeaponId: player.weaponId, playerWeaponColor: player.weaponColor, petColor: pet.color };
+        localStorage.setItem('rng_game_save', JSON.stringify(saveData));
+        
+        // حفظ في السحابة مع تأخير لتجنب الضغط
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(saveToCloud, 2000);
+    }
+
+    async function saveToCloud() {
+        if (!supabaseClient) return;
+        const saveData = JSON.stringify({ rolls, coins, gems, luck, luckCost, inventory, currentWave, maxUnlockedWave, pwr, playerWeaponId: player.weaponId, playerWeaponColor: player.weaponColor, petColor: pet.color });
+        
+        document.getElementById('saveStatus').innerText = "Saving to Cloud... ⏳";
+        await supabaseClient.from('leaderboard').upsert([{ 
+            name: playerName, 
+            power: pwr, 
+            wave: maxUnlockedWave,
+            save_data: saveData 
+        }], { onConflict: 'name' });
+        document.getElementById('saveStatus').innerText = "Cloud Save: Synced ☁️";
+    }
+
+    async function loadGame() {
+        // 1. محاولة التحميل من السحابة أولاً
+        if (supabaseClient) {
+            try {
+                const { data } = await supabaseClient.from('leaderboard').select('save_data').eq('name', playerName).single();
+                if (data && data.save_data) {
+                    applySaveData(JSON.parse(data.save_data));
+                    return;
+                }
+            } catch(e) {}
+        }
+
+        // 2. التحميل المحلي في حال عدم وجود حفظ سحابي
+        const saved = localStorage.getItem('rng_game_save');
+        if (saved) {
+            try { applySaveData(JSON.parse(saved)); } catch (e) {}
+        }
+    }
+
+    function applySaveData(data) {
+        rolls = data.rolls ?? rolls; coins = data.coins ?? coins; gems = data.gems ?? gems;
+        luck = data.luck ?? luck; luckCost = data.luckCost ?? luckCost; inventory = data.inventory ?? inventory;
+        currentWave = data.currentWave ?? currentWave; maxUnlockedWave = data.maxUnlockedWave ?? maxUnlockedWave;
+        pwr = data.pwr ?? pwr; player.weaponId = data.playerWeaponId ?? player.weaponId;
+        player.weaponColor = data.playerWeaponColor ?? player.weaponColor; pet.color = data.petColor ?? pet.color;
+        updateUI(); renderInv(); resetMonster();
+    }
+
+    function updateUI() {
+        document.getElementById('rolls').innerText = rolls;
+        document.getElementById('coins').innerText = coins;
+        document.getElementById('gems').innerText = gems;
+        document.getElementById('luck').innerText = luck.toFixed(2) + 'x';
+        document.getElementById('luckCost').innerText = luckCost;
+        document.getElementById('wave').innerText = currentWave + " / " + maxUnlockedWave;
+        document.getElementById('pwr').innerText = pwr.toLocaleString();
+    }
+
+    function openUpgrades() { alert("Coming Soon!"); }
+
+    function buyLuck() {
+        if (gems >= luckCost) {
+            gems -= luckCost; luck += 0.05; luckCost = Math.floor(luckCost * 2.5);
+            updateUI(); saveGame();
+        }
+    }
+
+    function changeWave(dir) {
+        let target = currentWave + dir;
+        if (target >= 1 && target <= maxUnlockedWave) {
+            currentWave = target; resetMonster(); updateUI(); saveGame();
+        }
+    }
+
+    function resetMonster() {
+        monster.isBoss = (currentWave % 10 === 0);
+        monster.r = monster.isBoss ? 40 : 28;
+        mMaxHp = Math.floor((monster.isBoss ? 500 : 150) * Math.pow(1.45, currentWave - 1));
+        mHp = mMaxHp;
+    }
+
+    function openPack(type) {
+        let cost = type === 'weapon' ? 100 : 500;
+        if (coins < cost || isRolling) return;
+        coins -= cost; rolls++; isRolling = true; updateUI();
+
+        let list = type === 'weapon' ? WEAPONS : PETS;
+        let counter = 0;
+        let anim = setInterval(() => {
+            let temp = list[Math.floor(Math.random() * list.length)];
+            document.getElementById('itemName').innerText = temp.name;
+            document.getElementById('itemName').style.color = temp.color;
+            if (++counter > 6) {
+                clearInterval(anim);
+                let rand = Math.random() / luck;
+                let won = list[0];
+                for (let i = list.length - 1; i >= 0; i--) {
+                    if (rand <= list[i].chance) { won = list[i]; break; }
+                }
+                document.getElementById('itemName').innerText = won.name;
+                document.getElementById('itemName').style.color = won.color;
+                
+                inventory[won.name] = { count: (inventory[won.name]?.count || 0) + 1, color: won.color, pwr: won.power };
+                
+                if (type === 'weapon' && won.power > (WEAPONS[player.weaponId]?.power || 0)) {
+                    player.weaponId = won.id; player.weaponColor = won.color;
+                }
+                if (type === 'pet' && won.power > (pet.pwr || 0)) { pet.color = won.color; pet.pwr = won.power; }
+
+                recalcPower(); renderInv(); isRolling = false; saveGame();
+            }
+        }, 50);
+    }
+
+    function recalcPower() {
+        pwr = 10;
+        for (let k in inventory) pwr += inventory[k].pwr * inventory[k].count;
+        updateUI();
+    }
+
+    function toggleAuto() {
+        if (autoInterval) { clearInterval(autoInterval); autoInterval = null; } 
+        else { autoInterval = setInterval(() => { if (!isRolling) openPack(autoType); }, 500); }
+    }
+
+    function renderInv() {
+        let el = document.getElementById('invList'); el.innerHTML = "";
+        for (let k in inventory) {
+            el.innerHTML += `<div class="inv-item"><span style="color:${inventory[k].color}">${k}</span><span>x${inventory[k].count}</span></div>`;
+        }
+    }
+
+    async function fetchLeaderboard() {
+        let listEl = document.getElementById('leaderboardList');
+        if (!supabaseClient) initSupabase();
+        if (!supabaseClient) return;
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('leaderboard')
+                .select('name, power, wave')
+                .order('power', { ascending: false })
+                .limit(10);
+
+            if (error || !data) return;
+
+            listEl.innerHTML = "";
+            data.forEach((row, index) => {
+                let medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index+1}`;
+                listEl.innerHTML += `
+                    <div style="display: flex; background: #0d0e12; padding: 4px 8px; border-radius: 4px; justify-content: space-between;">
+                        <span>${medal} <b>${row.name}</b></span>
+                        <span style="color: var(--gold);">Pwr: ${Number(row.power).toLocaleString()}</span>
+                    </div>
+                `;
+            });
+        } catch(err) {}
+    }
+
+    function setupRealtime() {
+        if (supabaseClient) {
+            supabaseClient
+                .channel('public:leaderboard')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, payload => {
+                    fetchLeaderboard();
+                })
+                .subscribe();
+        }
+    }
+
+    const cvs = document.getElementById('canvas'), ctx = cvs.getContext('2d');
+
+    function hitMonster(dmg) {
+        mHp -= dmg; monster.hit = 4;
+        texts.push({ t: "-" + Math.round(dmg).toLocaleString(), x: monster.x + (Math.random()*20-10), y: monster.y - 20, a: 1.0 });
+
+        if (mHp <= 0) {
+            coins += currentWave * (monster.isBoss ? 250 : 80);
+            if (currentWave % 2 === 0) gems += monster.isBoss ? 3 : 1;
+            if (currentWave === maxUnlockedWave) { maxUnlockedWave++; currentWave++; }
+            resetMonster(); updateUI(); saveGame();
+        }
+    }
+
+    function loop(time) {
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+        player.tx = monster.x - 55; player.ty = monster.y;
+        player.x += (player.tx - player.x) * 0.1; player.y += (player.ty - player.y) * 0.1;
+        pet.x += (player.x - 25 - pet.x) * 0.08; pet.y += (player.y + 10 - pet.y) * 0.08;
+
+        ctx.fillStyle = "#ecf0f1"; ctx.beginPath(); ctx.arc(player.x, player.y, 12, 0, Math.PI*2); ctx.fill();
+        
+        if (pet.color) {
+            ctx.fillStyle = pet.color; ctx.beginPath(); ctx.arc(pet.x, pet.y, 8, 0, Math.PI*2); ctx.fill();
+        }
+
+        monster.anim += 0.05; let b = Math.sin(monster.anim) * 3;
+        ctx.fillStyle = monster.hit > 0 ? "#fff" : (monster.isBoss ? "#d63031" : "#8e44ad");
+        ctx.beginPath(); ctx.arc(monster.x, monster.y + b, monster.r, 0, Math.PI*2); ctx.fill();
+
+        ctx.fillStyle = "#333"; ctx.fillRect(monster.x-30, monster.y-monster.r-14+b, 60, 6);
+        ctx.fillStyle = "#e74c3c"; ctx.fillRect(monster.x-30, monster.y-monster.r-14+b, 60 * Math.max(0, mHp/mMaxHp), 6);
+
+        if (Math.hypot(monster.x - player.x, monster.y - player.y) < 70) {
+            ctx.strokeStyle = player.weaponColor; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(monster.x, monster.y); ctx.stroke();
+            if (time - lastAtk > 400) { hitMonster(pwr); lastAtk = time; }
+        }
+
+        for (let i = texts.length - 1; i >= 0; i--) {
+            let t = texts[i]; ctx.fillStyle = `rgba(255, 118, 117, ${t.a})`;
+            ctx.font = "bold 13px sans-serif"; ctx.fillText(t.t, t.x, t.y);
+            t.y -= 1; t.a -= 0.03; if (t.a <= 0) texts.splice(i, 1);
+        }
+        requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        initSupabase();
+        await loadGame();
+        recalcPower(); renderInv(); resetMonster(); updateUI();
+        fetchLeaderboard();
+        requestAnimationFrame(loop);
+    });
+</script>
+</body>
+</html>
